@@ -1,0 +1,38 @@
+name: Nightly Mersenne Hunt
+
+on:
+  schedule:
+    # 12:00 AM IST = 18:30 UTC (previous day). GitHub cron is in UTC.
+    - cron: "30 18 * * *"
+  workflow_dispatch: {}   # allows manual "Run workflow" from the Actions tab
+
+permissions:
+  contents: write        # lets the job commit results back to this repo
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360             # hard 6-hour cap (GitHub's max for a job)
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install gmpy2 (fast big-integer arithmetic)
+        run: pip install gmpy2
+
+      - name: Hunt for Mersenne primes (5h 50m budget)
+        run: python mersenne_hunter.py --minutes 350
+
+      - name: Commit checkpoint and results
+        run: |
+          git config user.name  "mersenne-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Nightly hunt results: $(date -u '+%Y-%m-%d %H:%M UTC') [skip ci]" \
+            || echo "No changes to commit"
+          git push
